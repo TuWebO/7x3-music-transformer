@@ -30,41 +30,45 @@ KEY_SHIFTS = {
 def pitch_to_grid(pitch, key_shift, octaves, o0=0):
     """
     Convert a MIDI pitch number to grid indices (i, j_rel, o_idx).
+
     - pitch: MIDI pitch number (0-127)
     - key_shift: list of length 7, KEY_SHIFTS for selected key
-    - octaves: list of integer octave numbers to include
+    - octaves: list of integer octave numbers to include (scientific notation, e.g. [4,5])
+
     Returns: (diatonic index i, relative accidental j_rel, octave index o_idx)
     """
-    # Determine octave number and index
+    # MIDI note 0 = C-1
     octave = pitch // 12 - 1
     if octave not in octaves:
         return None
     o_idx = octaves.index(octave)
-
-    # Compute semitone within octave
     semitone = pitch % 12
 
-    # Find diatonic index i and absolute accidental j_abs
-    # Search for nearest DIATONIC_BASE + k (k in -1, 0, 1)
-    i = None
-    j_abs = None
-    for idx, base in enumerate(DIATONIC_BASE):
-        for j in (-1, 0, 1):
-            if (base + j) % 12 == semitone:
-                i = idx
-                j_abs = j
-                break
-        if i is not None:
-            break
-    if i is None:
-        # pitch not accounted by single accidental
-        return None
+    # 1) Prefer natural matches
+    i = next((idx for idx, base in enumerate(DIATONIC_BASE) if base == semitone), None)
+    if i is not None:
+        j_abs = 0
+    else:
+        # 2) No natural: pick sharp if semitone ≤6, else flat
+        if semitone <= 6:
+            # look for base+1 == semitone
+            for idx, base in enumerate(DIATONIC_BASE):
+                if (base + 1) % 12 == semitone:
+                    i, j_abs = idx, +1
+                    break
+        else:
+            # look for base-1 == semitone
+            for idx, base in enumerate(DIATONIC_BASE):
+                if (base - 1) % 12 == semitone:
+                    i, j_abs = idx, -1
+                    break
+        if i is None:
+            return None  # still no match
 
-    # Compute relative accidental by subtracting key shift
+    # 3) Convert to relative accidental in current key
     j_rel = j_abs - key_shift[i]
-    if j_rel < -1 or j_rel > 1:
-        # out of grid (double accidental)
-        return None
+    if not -1 <= j_rel <= 1:
+        return None  # out of our 3-column grid
 
     return i, j_rel, o_idx
 

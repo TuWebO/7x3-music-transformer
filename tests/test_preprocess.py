@@ -66,6 +66,19 @@ def test_pitch_out_of_octave_returns_none():
     assert result is None
 
 
+def test_pitch_to_grid_g_major():
+    # Test F and F# mapping in G major for octave 4
+    key_shift = KEY_SHIFTS['G']
+    octaves = [4]
+    # F4 should map to relative j_rel=-1 (F natural) in G major
+    assert pitch_to_grid(65, key_shift, octaves) == (3, -1, 0)
+    # F#4 should map to relative j_rel=0 (default) in G major
+    assert pitch_to_grid(66, key_shift, octaves) == (3, 0, 0)
+    # G4 remains natural in center column
+    assert pitch_to_grid(67, key_shift, octaves) == (4, 0, 0)
+    # C4 remains natural in center column
+    assert pitch_to_grid(60, key_shift, octaves) == (0, 0, 0)
+
 def test_unsupported_key_raises(tmp_path):
     midi_file = tmp_path / "dummy.mid"
     with pytest.raises(ValueError):
