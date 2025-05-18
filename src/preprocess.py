@@ -29,13 +29,17 @@ KEY_SHIFTS = {
 
 def detect_key(midi_path):
     """
-    Auto-detect major/minor key signature using music21.
-    Returns e.g. 'C', 'G', 'F#', 'Bb', or 'Am' etc.
+    Auto-detect major key signature using music21 (fallback to relative major for minor keys).
+    Returns e.g. 'C', 'G', 'F#', 'Bb', etc.
     """
     score = converter.parse(midi_path)
     k = score.analyze('key')
-    tonic = k.tonic.name
-    return tonic if k.mode == 'major' else tonic + 'm'
+    # If minor, use the relative major
+    if k.mode != 'major':
+        k = k.getRelativeMajor()
+    # Normalize tonic name: music21 may use '-' for flats, replace with 'b'
+    tonic = k.tonic.name.replace('-', 'b')
+    return tonic
 
 
 def detect_octaves(midi_path):
@@ -59,15 +63,12 @@ def pitch_to_grid(pitch, key_shift, octaves, o0=0):
     - octaves: list of integer octave numbers to include
     Returns: (diatonic index i, relative accidental j_rel, octave index o_idx)
     """
-    # Determine octave index
     octave = pitch // 12 - 1
     if octave not in octaves:
         return None
     o_idx = octaves.index(octave)
 
-    # Semitone within octave
     semitone = pitch % 12
-
     # 1) Prefer natural
     i = next((idx for idx, base in enumerate(DIATONIC_BASE) if base == semitone), None)
     if i is not None:
@@ -83,12 +84,10 @@ def pitch_to_grid(pitch, key_shift, octaves, o0=0):
         if match is None:
             return None
         i, j_abs = match
-
     # 3) Convert to relative accidental
     j_rel = j_abs - key_shift[i]
     if not -1 <= j_rel <= 1:
         return None
-
     return i, j_rel, o_idx
 
 
@@ -100,12 +99,10 @@ def midi_to_grid(midi_file, octaves, key):
     key_shift = KEY_SHIFTS.get(key)
     if key_shift is None:
         raise ValueError(f"Unsupported key: {key}")
-
     pm = pretty_midi.PrettyMIDI(midi_file)
     end_time = pm.get_end_time()
     step = 0.125  # 16th-note quantization
     times = np.arange(0, end_time, step)
-
     frames = []
     for t in times:
         grid = np.zeros((7, 3, len(octaves)), dtype=np.uint8)
@@ -117,7 +114,6 @@ def midi_to_grid(midi_file, octaves, key):
                         i, j_rel, o_idx = res
                         grid[i, j_rel + 1, o_idx] = 1
         frames.append(grid)
-
     return np.stack(frames)
 
 
@@ -138,7 +134,6 @@ def main(args):
         out_path = os.path.join(args.output, out_fname)
         np.savez_compressed(out_path, grid=grid_seq)
         metadata[fname] = {"file": out_fname, "key": key, "octaves": octaves}
-
     with open(os.path.join(args.output, 'metadata.json'), 'w') as f:
         json.dump(metadata, f, indent=2)
     print("Done.")
