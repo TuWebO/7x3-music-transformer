@@ -1,0 +1,20 @@
+device: "cpu"  # or "cuda" if GPU is available
+
+data:
+  train_dir: "data/processed"   # directory containing .npz grid files
+  octaves: [3, 4, 5]            # list of octave numbers to include
+  key: "C"                      # major key signature for preprocessing
+
+model:
+  d_model: 128
+  nhead: 4
+  num_layers: 2
+  dropout: 0.1
+
+training:
+  batch_size: 16
+  max_len: 5000    # max sequence length for positional encoding
+  lr: 0.001        # learning rate
+  epochs: 10       # number of training epochs
+  grad_clip: 1.0   # max gradient norm for clipping
+  ckpt_dir: "checkpoints"  # directory to save model checkpoints

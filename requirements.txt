@@ -1,0 +1,30 @@
+# Core
+numpy
+pandas
+
+# MIDI processing
+pretty_midi
+mido
+music21
+
+# Deep learning
+torch>=1.10
+torchvision
+torchtext
+
+# Transformers & hub
+transformers
+huggingface_hub
+
+# Visualization
+matplotlib
+plotly
+
+# Serving & demos
+streamlit
+gradio
+
+# Utilities
+pyyaml
+tqdm
+pytest
